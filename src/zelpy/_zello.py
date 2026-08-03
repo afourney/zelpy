@@ -173,7 +173,7 @@ class Zello:
         )
         if not response.get("success"):
             raise RuntimeError(response.get("error", "voice stream failed"))
-        stream_id = response["stream_id"]
+        stream_id = int(response["stream_id"])
         started = asyncio.get_running_loop().time()
         for index, packet in enumerate(packets):
             await self.ws.send(struct.pack(">BII", 1, stream_id, 0) + packet)
