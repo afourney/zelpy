@@ -113,10 +113,17 @@ class Zello:
                         )
                     )
                 elif command == "on_stream_start" and event.get("codec") == "opus":
-                    raw = base64.b64decode(event["codec_header"])
-                    rate, _, packet_ms = struct.unpack("<HBB", raw)
+                    try:
+                        stream_id = int(event["stream_id"])
+                        codec_header = event["codec_header"]
+                        if not isinstance(codec_header, str):
+                            raise TypeError
+                        raw = base64.b64decode(codec_header)
+                        rate, _, packet_ms = struct.unpack("<HBB", raw)
+                    except (KeyError, TypeError, ValueError, struct.error):
+                        continue
                     output = io.BytesIO()
-                    self.incoming[event["stream_id"]] = (
+                    self.incoming[stream_id] = (
                         output,
                         OggOpusWriter(output, rate, packet_ms),
                         str(event.get("channel", self.channel)),
