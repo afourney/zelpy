@@ -1,0 +1,64 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v8
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen --all-groups
+      - run: uv run --no-sync poe check
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v8
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --frozen --all-groups
+      - run: uv run --no-sync poe test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v8
+        with:
+          python-version: "3.11"
+      - run: uv build --out-dir dist
+      - name: Check the wheel contents
+        run: |
+          mapfile -t wheels < <(ls -1 dist/*.whl)
+          [ "${#wheels[@]}" -eq 1 ] || { echo "expected exactly 1 wheel, found ${#wheels[@]}"; exit 1; }
+          for name in \
+            zelpy/__init__.py \
+            zelpy/_audio.py \
+            zelpy/_cli.py \
+            zelpy/_credentials.py \
+            zelpy/_messages.py \
+            zelpy/_zello.py \
+            zelpy/py.typed
+          do
+            unzip -l "${wheels[0]}" | grep -q "$name" || { echo "missing from wheel: $name"; exit 1; }
+          done
+      - name: Check the metadata renders on PyPI
+        run: uvx twine check --strict dist/*
