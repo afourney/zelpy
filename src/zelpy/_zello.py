@@ -72,10 +72,15 @@ class Zello:
 
     async def command(self, command: str, **fields: object) -> dict[str, Any]:
         self.seq += 1
-        future = asyncio.get_running_loop().create_future()
-        self.pending[self.seq] = future
-        await self.ws.send(json.dumps({"command": command, "seq": self.seq, **fields}))
-        return await asyncio.wait_for(future, 10)
+        seq = self.seq
+        future: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
+        self.pending[seq] = future
+        try:
+            await self.ws.send(json.dumps({"command": command, "seq": seq, **fields}))
+            return await asyncio.wait_for(asyncio.shield(future), 10)
+        finally:
+            if self.pending.pop(seq, None) is not None and not future.done():
+                future.cancel()
 
     async def _receive(self) -> None:
         try:
