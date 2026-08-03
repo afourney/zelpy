@@ -47,17 +47,22 @@ class Zello:
     async def __aenter__(self) -> Zello:
         self.ws = await connect(self.endpoint, ping_interval=None)
         self.receiver = asyncio.create_task(self._receive())
-        response = await self.command(
-            "logon",
-            auth_token=self.credentials.auth_token(),
-            username=self.credentials.username,
-            password=self.credentials.password,
-            channels=[self.channel],
-        )
-        if not response.get("success"):
-            raise RuntimeError(response.get("error", "logon failed"))
-        await asyncio.wait_for(self.online.wait(), 10)
-        return self
+        try:
+            response = await self.command(
+                "logon",
+                auth_token=self.credentials.auth_token(),
+                username=self.credentials.username,
+                password=self.credentials.password,
+                channels=[self.channel],
+            )
+            if not response.get("success"):
+                raise RuntimeError(response.get("error", "logon failed"))
+            await asyncio.wait_for(self.online.wait(), 10)
+            return self
+        except BaseException:
+            with contextlib.suppress(BaseException):
+                await self.__aexit__(None, None, None)
+            raise
 
     async def __aexit__(self, *_: object) -> None:
         if self.ws is not None:
