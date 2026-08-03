@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zelpy"
+version = "0.0.0a1"
+description = "Python client library for the Zello push-to-talk platform."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Adam Fourney", email = "adam.fourney@gmail.com" },
+]
+license = "MIT"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+dependencies = [
+    "cryptography>=42",
+    "pyyaml>=6",
+    "websockets>=12",
+]
+
+[dependency-groups]
+dev = [
+    "codespell",
+    "poethepoet",
+    "pytest>=8",
+    "ruff",
+]
+
+[project.scripts]
+zelpy = "zelpy._cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "C4",
+    "UP",
+    "D",
+    "SIM",
+    "BLE",
+    "ISC",
+    "RUF",
+]
+ignore = [
+    "E501",
+    "D203",
+    "D213",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+
+[tool.poe.tasks]
+format = "ruff format --check --diff src tests"
+format-fix = "ruff format src tests"
+lint = "ruff check src tests"
+lint-fix = "ruff check --fix src tests"
+spell = "codespell src tests README.md"
+test = "pytest"
+build = "uv build --out-dir dist"
+check = ["format", "lint", "spell"]
+check-all = ["format", "lint", "spell", "test"]
+fix-all = ["format-fix", "lint-fix"]
